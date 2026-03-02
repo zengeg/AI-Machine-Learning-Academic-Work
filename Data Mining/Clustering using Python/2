@@ -1,0 +1,54 @@
+import numpy as np
+
+def initialize_centroids(X, k):
+    """Initializes centroids using the KMeans++ strategy."""
+    np.random.seed(42)
+    centroids = []
+    first_centroid = X[np.random.choice(X.shape[0])]  # Select a random point as the first centroid
+    centroids.append(first_centroid)
+    
+    for _ in range(k - 1):
+        distances = np.min([np.linalg.norm(X - c, axis=1) for c in centroids], axis=0)
+        probabilities = distances ** 2 / np.sum(distances ** 2)
+        new_centroid = X[np.random.choice(X.shape[0], p=probabilities)]
+        centroids.append(new_centroid)
+    
+    return np.array(centroids)
+
+def assign_clusters(X, centroids):
+    """Assigns each point to the nearest centroid."""
+    distances = []
+    for c in centroids:
+        dist = np.linalg.norm(X - c, axis=1)  # Calculate Euclidean distance
+        distances.append(dist)
+    
+    labels = np.argmin(np.array(distances), axis=0)
+    return labels
+
+def update_centroids(X, labels, k):
+    """Recomputes centroids as the mean of assigned points."""
+    new_centroids = []
+    for i in range(k):
+        cluster_points = X[labels == i]
+        if len(cluster_points) > 0:
+            new_centroid = np.mean(cluster_points, axis=0)
+        else:
+            new_centroid = X[np.random.choice(X.shape[0])]  # If a cluster is empty, reinitialize randomly
+        new_centroids.append(new_centroid)
+    return np.array(new_centroids)
+
+def kmeans(X, k, max_iters=100):
+    """Performs KMeans clustering."""
+    centroids = initialize_centroids(X, k)
+    
+    for _ in range(max_iters):
+        labels = assign_clusters(X, centroids)
+        new_centroids = update_centroids(X, labels, k)
+        
+        # Check if centroids have converged (if they are the same)
+        if np.allclose(centroids, new_centroids):  # Use np.allclose to compare arrays
+            break  # Stop if centroids do not change
+        
+        centroids = new_centroids
+    
+    return labels
