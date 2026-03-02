@@ -1,0 +1,56 @@
+import numpy as np
+from scipy.spatial.distance import pdist, squareform
+
+def compute_distance_matrix(X):
+    """Computes the pairwise distance matrix."""
+    pairwise_distances = pdist(X)  # Compute all pairwise distances using pdist()
+    distance_matrix = squareform(pairwise_distances)  # Convert to square matrix format
+    return distance_matrix
+
+def find_closest_clusters(distances):
+    """Finds the indices of the two closest clusters."""
+    min_dist_index = np.argmin(distances)  # Get index of the smallest value using argmin()
+    i, j = np.unravel_index(min_dist_index, distances.shape)  # Convert to row, col indices
+    return i, j
+
+def update_distances(distances, clusters, i, j):
+    """Updates the distance matrix after merging clusters i and j."""
+    for idx in clusters:
+        if idx != i:  # Skip the merged cluster
+            cluster_distances = []  # Create an empty list to store distances
+            for point_i in clusters[i]:  # Loop through each point in cluster i
+                for point_j in clusters[idx]:  # Loop through each point in cluster idx
+                    cluster_distances.append(distances[point_i, point_j])  # Append the corresponding distance
+            distances[i, idx] = distances[idx, i] = min(cluster_distances)  # Update using Minimum linkage
+    distances[:, j] = distances[j, :] = np.inf  # Set merged cluster to infinity to ignore it
+
+def agglomerative_clustering(X, k):
+    """Performs agglomerative hierarchical clustering using minimum distance linkage."""
+    num_points = len(X)
+    
+    # Initialize each point as its own cluster
+    clusters = {}  # Create an empty dictionary
+    for i in range(num_points):  # Loop through each point index
+        clusters[i] = [i]  # Assign each point to its own cluster
+    
+    # Compute distances matrix
+    distances = compute_distance_matrix(X)
+    np.fill_diagonal(distances, np.inf)  # Set diagonal to infinity to ignore self-distances
+    
+    while len(clusters) > k:
+        i, j = find_closest_clusters(distances)  # Get the closest clusters
+        
+        # Merge cluster j into cluster i
+        clusters[i].extend(clusters[j])
+        del clusters[j]
+        
+        # Update the distance matrix
+        update_distances(distances, clusters, i, j)
+    
+    # Assign labels to points based on final clusters
+    labels = np.zeros(num_points)
+    for cluster_id, points in enumerate(clusters.values()):  # Enumerate over clusters values
+        for point in points:  # For each point in the cluster
+            labels[point] = cluster_id  # Assign the corresponding label as the cluster id
+    
+    return labels
